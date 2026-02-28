@@ -21,6 +21,12 @@ func Parse(sel string) string {
 	case strings.HasPrefix(sel, "id="):
 		id := strings.TrimPrefix(sel, "id=")
 		return "#" + id
+	case strings.HasPrefix(sel, "text="):
+		return sel // pass through (Playwright native)
+	case strings.HasPrefix(sel, "role="):
+		return sel // pass through (Playwright native)
+	case strings.HasPrefix(sel, "label="):
+		return sel // pass through (Playwright native)
 	default:
 		return sel
 	}
@@ -37,4 +43,9 @@ func IsXPath(sel string) bool {
 // IsLinkText returns true if the selector uses link= prefix.
 func IsLinkText(sel string) bool {
 	return strings.HasPrefix(sel, "link=") || strings.HasPrefix(sel, "partial_link=")
+}
+
+// IsTextSelector returns true if the selector uses text= prefix.
+func IsTextSelector(sel string) bool {
+	return strings.HasPrefix(sel, "text=")
 }

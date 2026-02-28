@@ -20,6 +20,11 @@ SeleniumBase-style browser automation for Go, built on [playwright-go](https://g
 - Local/session storage helpers
 - Tab management, frame access, dialog handling, PDF and screenshot capture
 - Full escape hatches to the underlying `playwright.Page`, `playwright.Locator`, and `playwright.BrowserContext`
+- Scroll methods — smooth, animated, and directional scrolling
+- Network interception — route, abort, and mock API responses
+- Highlight / demo mode — visual element highlighting for debugging
+- Deferred assertions — queue assertion failures and process them together
+- MFA / TOTP support — generate and enter time-based one-time passwords
 
 ---
 
@@ -131,6 +136,7 @@ Options are passed as variadic arguments to `sb.Run`, `sb.RunTest`, or `sb.NewPa
 | `WithLocale` | `WithLocale(code string)` | — | Browser locale, e.g. `"en-US"`, `"ko-KR"` |
 | `WithIgnoreHTTPSErrors` | `WithIgnoreHTTPSErrors(ignore bool)` | `false` | Accept invalid TLS certificates |
 | `WithColorScheme` | `WithColorScheme(scheme string)` | — | Emulate color scheme: `"dark"`, `"light"`, `"no-preference"` |
+| `WithDemoMode` | `WithDemoMode(enabled bool)` | `false` | Enable demo mode (highlight elements before interaction) |
 
 ### Timeout constants
 
@@ -154,6 +160,9 @@ All methods that accept a `sel string` parameter run the selector through the tr
 | `name=fieldName` | `[name="fieldName"]` | `p.Type("name=q", "go")` |
 | `link=Exact Link Text` | `a:has-text("Exact Link Text")` | `p.Click("link=Sign in")` |
 | `partial_link=Partial` | `a:has-text("Partial")` | `p.Click("partial_link=Sign")` |
+| `text=Hello` | `text=Hello` (Playwright native) | `p.AssertText("Hello", "text=Hello")` |
+| `role=button` | `role=button` (Playwright native) | `p.Click("role=button")` |
+| `label=Email` | `label=Email` (Playwright native) | `p.Type("label=Email", "test@example.com")` |
 | `css=div.header` | `div.header` | `p.AssertElement("css=div.header")` |
 | `xpath=//h1` | `//h1` | `p.AssertElement("xpath=//h1")` |
 | bare CSS (default) | passed through as-is | `p.Click("button.submit")` |
@@ -306,6 +315,54 @@ func (p *Page) GetSessionStorage(key string) (string, error)
 func (p *Page) ClearSessionStorage() error
 ```
 
+### Scroll
+
+```go
+func (p *Page) ScrollTo(sel string) error
+func (p *Page) ScrollToTop() error
+func (p *Page) ScrollToBottom() error
+func (p *Page) ScrollToY(y int) error
+func (p *Page) ScrollUp(px ...float64) error
+func (p *Page) ScrollDown(px ...float64) error
+func (p *Page) SlowScrollTo(sel string) error
+```
+
+### Network
+
+```go
+func (p *Page) Route(url string, handler func(playwright.Route)) error
+func (p *Page) Unroute(url string) error
+func (p *Page) RouteAbort(urlPattern string) error
+func (p *Page) MockAPI(urlPattern string, body string, opts ...MockAPIOptions) error
+```
+
+### Highlight
+
+```go
+func (p *Page) Highlight(sel string, loops ...int) error
+func (p *Page) HighlightClick(sel string) error
+func (p *Page) HighlightType(sel, text string) error
+func (p *Page) RemoveHighlights() error
+```
+
+### Deferred Assertions
+
+```go
+func (p *Page) DeferredAssertElement(sel string) bool
+func (p *Page) DeferredAssertElementPresent(sel string) bool
+func (p *Page) DeferredAssertText(text, sel string) bool
+func (p *Page) DeferredAssertExactText(text, sel string) bool
+func (p *Page) ProcessDeferredAsserts() error
+func (p *Page) ClearDeferredAsserts()
+```
+
+### MFA / TOTP
+
+```go
+func (p *Page) GetMFACode(totpKey string) (string, error)
+func (p *Page) EnterMFACode(sel, totpKey string) error
+```
+
 ---
 
 ## Escape Hatches
@@ -344,17 +401,17 @@ go test -tags integration ./examples/...
 
 ## Roadmap
 
-**Phase 2 (planned)**
+**Phase 1 (complete)** — Core API: navigation, interaction, assertions, wait, query, cookies, JS, window/tab, frames, screenshots, dialogs, storage
 
-- Network interception and request mocking
-- `highlight_click` and visual debugging helpers
-- Retry decorator for flaky-element handling
+**Phase 2 (complete)** — Extension features: scroll methods, network interception, highlight/demo mode, deferred assertions, extended selectors (`text=`, `role=`, `label=`), MFA/TOTP support
 
 **Phase 3 (planned)**
 
+- CDP stealth mode for bot detection bypass
+- Recorder — capture and replay browser sessions
+- Visual testing — screenshot comparison and diffing
 - Parallel test runner utilities
 - Report generation (HTML, JUnit)
-- Extended selector engine (text=, role=, label=)
 
 ---
 

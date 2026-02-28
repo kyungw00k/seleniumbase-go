@@ -24,6 +24,7 @@ type Config struct {
 	Locale            string        // e.g. "en-US"
 	IgnoreHTTPSErrors bool
 	ColorScheme       string        // "dark", "light", "no-preference"
+	DemoMode          bool          // enable demo mode (highlight elements before interaction)
 }
 
 func newDefaultConfig() *Config {

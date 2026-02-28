@@ -50,6 +50,13 @@ func TestParse(t *testing.T) {
 		{"text selector", "text=Hello", "text=Hello"},
 		{"text selector with spaces", "text=Hello World", "text=Hello World"},
 
+		// role= pass through (Playwright native)
+		{"role selector", "role=button", "role=button"},
+		{"role selector with name", "role=heading", "role=heading"},
+		// label= pass through (Playwright native)
+		{"label selector", "label=Email", "label=Email"},
+		{"label selector with spaces", "label=User Name", "label=User Name"},
+
 		// Edge cases
 		{"empty string", "", ""},
 		{"whitespace", "   ", "   "},
@@ -91,6 +98,30 @@ func TestIsXPath(t *testing.T) {
 			got := IsXPath(tt.input)
 			if got != tt.want {
 				t.Errorf("IsXPath(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsTextSelector(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{"text= prefix", "text=Hello", true},
+		{"text= with spaces", "text=Hello World", true},
+		{"css selector", "#id", false},
+		{"link selector", "link=Login", false},
+		{"role selector", "role=button", false},
+		{"label selector", "label=Email", false},
+		{"empty string", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsTextSelector(tt.input)
+			if got != tt.want {
+				t.Errorf("IsTextSelector(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
 	}

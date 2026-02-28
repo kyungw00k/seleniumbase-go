@@ -47,3 +47,7 @@ func WithIgnoreHTTPSErrors(ignore bool) Option {
 func WithColorScheme(scheme string) Option {
 	return func(c *Config) { c.ColorScheme = scheme }
 }
+
+func WithDemoMode(enabled bool) Option {
+	return func(c *Config) { c.DemoMode = enabled }
+}

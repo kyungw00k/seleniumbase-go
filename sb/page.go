@@ -10,7 +10,8 @@ type Page struct {
 	pw      playwright.Page
 	context playwright.BrowserContext
 	config  *Config
-	expect  playwright.PlaywrightAssertions
+	expect           playwright.PlaywrightAssertions
+	deferredFailures []error
 }
 
 func newPage(pw playwright.Page, ctx playwright.BrowserContext, cfg *Config) *Page {

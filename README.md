@@ -25,6 +25,7 @@ SeleniumBase-style browser automation for Go, built on [playwright-go](https://g
 - Highlight / demo mode — visual element highlighting for debugging
 - Deferred assertions — queue assertion failures and process them together
 - MFA / TOTP support — generate and enter time-based one-time passwords
+- CDP stealth mode — launch Chrome externally with anti-detection flags, connect via CDP
 
 ---
 
@@ -137,6 +138,10 @@ Options are passed as variadic arguments to `sb.Run`, `sb.RunTest`, or `sb.NewPa
 | `WithIgnoreHTTPSErrors` | `WithIgnoreHTTPSErrors(ignore bool)` | `false` | Accept invalid TLS certificates |
 | `WithColorScheme` | `WithColorScheme(scheme string)` | — | Emulate color scheme: `"dark"`, `"light"`, `"no-preference"` |
 | `WithDemoMode` | `WithDemoMode(enabled bool)` | `false` | Enable demo mode (highlight elements before interaction) |
+| `WithStealth` | `WithStealth(enabled bool)` | `false` | Enable CDP stealth mode (Chromium only) |
+| `WithChromePath` | `WithChromePath(path string)` | auto-detected | Custom Chrome executable path |
+| `WithUserDataDir` | `WithUserDataDir(dir string)` | temp dir | Custom user data directory for stealth mode |
+| `WithExtraArgs` | `WithExtraArgs(args ...string)` | — | Additional Chrome launch arguments |
 
 ### Timeout constants
 
@@ -363,6 +368,26 @@ func (p *Page) GetMFACode(totpKey string) (string, error)
 func (p *Page) EnterMFACode(sel, totpKey string) error
 ```
 
+### Stealth Mode
+
+Stealth mode launches Chrome externally with anti-detection flags and connects
+Playwright via CDP. This avoids the automation fingerprints that Playwright's
+built-in launch adds.
+
+```go
+sb.Run(func(p *sb.Page) error {
+    p.Open("https://bot.sannysoft.com")
+    p.Screenshot("stealth-check.png")
+    return nil
+}, sb.WithStealth(true), sb.WithHeadless(false))
+```
+
+When stealth mode is enabled:
+- Only Chromium is supported (not Firefox or WebKit)
+- Chrome must be installed on the system (or specify path with `WithChromePath`)
+- A temporary user data directory is created and cleaned up on close
+- All standard `sb.Page` methods work normally
+
 ---
 
 ## Escape Hatches
@@ -405,9 +430,9 @@ go test -tags integration ./examples/...
 
 **Phase 2 (complete)** — Extension features: scroll methods, network interception, highlight/demo mode, deferred assertions, extended selectors (`text=`, `role=`, `label=`), MFA/TOTP support
 
-**Phase 3 (planned)**
+**Phase 3 (in progress)**
 
-- CDP stealth mode for bot detection bypass
+- ~~CDP stealth mode for bot detection bypass~~ (complete)
 - Recorder — capture and replay browser sessions
 - Visual testing — screenshot comparison and diffing
 - Parallel test runner utilities

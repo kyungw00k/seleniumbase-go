@@ -13,6 +13,7 @@ type SB struct {
 	browser playwright.Browser
 	context playwright.BrowserContext
 	config  *Config
+	process *stealthProcess
 }
 
 func newSB(opts ...Option) (*SB, error) {
@@ -24,6 +25,10 @@ func newSB(opts ...Option) (*SB, error) {
 	pw, err := playwright.Run()
 	if err != nil {
 		return nil, fmt.Errorf("sb: could not start playwright: %w", err)
+	}
+
+	if cfg.Stealth {
+		return newStealthSB(pw, cfg)
 	}
 
 	var browserType playwright.BrowserType
@@ -111,6 +116,9 @@ func (s *SB) close() {
 	}
 	if s.browser != nil {
 		s.browser.Close()
+	}
+	if s.process != nil {
+		s.process.stop()
 	}
 	if s.pw != nil {
 		s.pw.Stop()

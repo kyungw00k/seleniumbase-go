@@ -51,3 +51,19 @@ func WithColorScheme(scheme string) Option {
 func WithDemoMode(enabled bool) Option {
 	return func(c *Config) { c.DemoMode = enabled }
 }
+
+func WithStealth(enabled bool) Option {
+	return func(c *Config) { c.Stealth = enabled }
+}
+
+func WithChromePath(path string) Option {
+	return func(c *Config) { c.ChromePath = path }
+}
+
+func WithUserDataDir(dir string) Option {
+	return func(c *Config) { c.UserDataDir = dir }
+}
+
+func WithExtraArgs(args ...string) Option {
+	return func(c *Config) { c.ExtraArgs = args }
+}

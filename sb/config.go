@@ -25,6 +25,10 @@ type Config struct {
 	IgnoreHTTPSErrors bool
 	ColorScheme       string        // "dark", "light", "no-preference"
 	DemoMode          bool          // enable demo mode (highlight elements before interaction)
+	Stealth           bool          // enable CDP stealth mode (external Chrome launch)
+	ChromePath        string        // custom Chrome executable path (auto-detected if empty)
+	UserDataDir       string        // custom user data directory (temp dir if empty)
+	ExtraArgs         []string      // additional Chrome launch arguments
 }
 
 func newDefaultConfig() *Config {

@@ -92,6 +92,27 @@ jobs:
       - name: Run TestVisualAssertMatch
         run: gotestsum --junitfile junit/visual-assert-match.xml -- ./examples/... -tags integration -run TestVisualAssertMatch -v -timeout 60s
 
+      - name: Run TestCoffeeCart
+        run: gotestsum --junitfile junit/coffee-cart.xml -- ./examples/... -tags integration -run TestCoffeeCart -v -timeout 60s
+
+      - name: Run TestXkcd
+        run: gotestsum --junitfile junit/xkcd.xml -- ./examples/... -tags integration -run TestXkcd -v -timeout 60s
+
+      - name: Run TestSimpleLogin
+        run: gotestsum --junitfile junit/simple-login.xml -- ./examples/... -tags integration -run TestSimpleLogin -v -timeout 60s
+
+      - name: Run TestURLAsserts
+        run: gotestsum --junitfile junit/url-asserts.xml -- ./examples/... -tags integration -run TestURLAsserts -v -timeout 60s
+
+      - name: Run TestCalculator
+        run: gotestsum --junitfile junit/calculator.xml -- ./examples/... -tags integration -run TestCalculator -v -timeout 60s
+
+      - name: Run TestCookiePersistence
+        run: gotestsum --junitfile junit/cookies.xml -- ./examples/... -tags integration -run TestCookiePersistence -v -timeout 60s
+
+      - name: Run TestAlertHandling
+        run: gotestsum --junitfile junit/alert.xml -- ./examples/... -tags integration -run TestAlertHandling -v -timeout 60s
+
       - name: Upload Integration Test Results
         if: always()
         uses: actions/upload-artifact@v4

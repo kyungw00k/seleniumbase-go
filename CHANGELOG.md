@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.0](https://github.com/kyungw00k/seleniumbase-go/compare/v1.0.0...v1.1.0) (2026-03-01)
+
+
+### Features
+
+* add Phase 3 recorder feature ([54e4758](https://github.com/kyungw00k/seleniumbase-go/commit/54e475823444dd63d1db65d469dc27c13a95994d))
+* add Phase 3 visual testing, parallel runner, and report generation ([e169006](https://github.com/kyungw00k/seleniumbase-go/commit/e1690060e8240e150baefa49c82d75653f911098))
+
+
+### Bug Fixes
+
+* rename page_js.go to page_eval.go ([a1561a0](https://github.com/kyungw00k/seleniumbase-go/commit/a1561a092591fd29720de0e9b5efc4b20f9f04f6))
+
+
+### Documentation
+
+* add SeleniumBase inspiration credit and update README ([e454d89](https://github.com/kyungw00k/seleniumbase-go/commit/e454d89d2ff3e9747d99249d32b7186da61f1d56))
+
 ## 1.0.0 (2026-02-28)
 
 

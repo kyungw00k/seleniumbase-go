@@ -28,8 +28,16 @@ func Parse(sel string) string {
 	case strings.HasPrefix(sel, "label="):
 		return sel // pass through (Playwright native)
 	default:
+		if strings.Contains(sel, ":contains(") {
+			return transformContains(sel)
+		}
 		return sel
 	}
+}
+
+// transformContains replaces :contains("text") with :has-text("text") for Playwright compatibility.
+func transformContains(sel string) string {
+	return strings.ReplaceAll(sel, ":contains(", ":has-text(")
 }
 
 // IsXPath returns true if the selector is an XPath expression.

@@ -26,6 +26,7 @@ SeleniumBase-style browser automation for Go, built on [playwright-go](https://g
 - Deferred assertions — queue assertion failures and process them together
 - MFA / TOTP support — generate and enter time-based one-time passwords
 - CDP stealth mode — launch Chrome externally with anti-detection flags, connect via CDP
+- Recorder — capture browser interactions and generate Go test code
 
 ---
 
@@ -368,6 +369,37 @@ func (p *Page) GetMFACode(totpKey string) (string, error)
 func (p *Page) EnterMFACode(sel, totpKey string) error
 ```
 
+### Recorder
+
+Record browser interactions and generate Go test code automatically.
+
+```go
+// Manual control
+sb.Run(func(p *sb.Page) error {
+    p.StartRecording()
+    p.Open("https://example.com")
+    // ... interact with the page ...
+    actions, _ := p.StopRecording()
+    code := sb.GenerateGoCode(actions)
+    os.WriteFile("recorded_test.go", []byte(code), 0644)
+    return nil
+}, sb.WithHeadless(false))
+
+// Convenience: opens browser, records until closed, writes Go file
+sb.RunRecorder("recorded_test.go", sb.WithHeadless(false))
+```
+
+Keyboard shortcuts during recording:
+- `Shift+S` — Assert text on hovered element
+- `Shift+E` — Assert element exists
+- `Shift+P` — Assert element present in DOM
+- `Shift+V` — Assert element visible
+- `Shift+N` — Assert element not visible
+- `Shift+H` — Highlight element
+- `Shift+G` — Save screenshot
+- `Escape` — Pause recording
+- `` ` `` — Resume recording
+
 ### Stealth Mode
 
 Stealth mode launches Chrome externally with anti-detection flags and connects
@@ -433,7 +465,7 @@ go test -tags integration ./examples/...
 **Phase 3 (in progress)**
 
 - ~~CDP stealth mode for bot detection bypass~~ (complete)
-- Recorder — capture and replay browser sessions
+- ~~Recorder — capture and replay browser sessions~~ (complete)
 - Visual testing — screenshot comparison and diffing
 - Parallel test runner utilities
 - Report generation (HTML, JUnit)

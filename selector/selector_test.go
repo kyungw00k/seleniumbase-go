@@ -57,6 +57,11 @@ func TestParse(t *testing.T) {
 		{"label selector", "label=Email", "label=Email"},
 		{"label selector with spaces", "label=User Name", "label=User Name"},
 
+		// :contains() → :has-text() transformation
+		{"contains button", `button:contains("Login")`, `button:has-text("Login")`},
+		{"contains with descendant", `div:contains("Hello") span`, `div:has-text("Hello") span`},
+		{"no contains unchanged", "#submit", "#submit"},
+
 		// Edge cases
 		{"empty string", "", ""},
 		{"whitespace", "   ", "   "},

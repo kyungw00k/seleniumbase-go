@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.1](https://github.com/kyungw00k/seleniumbase-go/compare/v1.2.0...v1.2.1) (2026-03-01)
+
+
+### Bug Fixes
+
+* **ci:** add explicit permissions to resolve CodeQL alerts ([e695443](https://github.com/kyungw00k/seleniumbase-go/commit/e695443e3db0d33c54a062cd107db871c0c9de83))
+
+
+### Documentation
+
+* add Korean, Chinese, and Japanese README translations ([3ae80cf](https://github.com/kyungw00k/seleniumbase-go/commit/3ae80cfe90629c501a50e763f911c24c5e9eabd1))
+
 ## [1.2.0](https://github.com/kyungw00k/seleniumbase-go/compare/v1.1.0...v1.2.0) (2026-03-01)
 
 

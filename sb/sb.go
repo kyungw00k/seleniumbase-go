@@ -24,11 +24,31 @@ func newSB(opts ...Option) (*SB, error) {
 
 	pw, err := playwright.Run()
 	if err != nil {
-		return nil, fmt.Errorf("sb: could not start playwright: %w", err)
+		// Playwright driver not found — attempt auto-install
+		channel, installErr := EnsureBrowser()
+		if installErr != nil {
+			return nil, fmt.Errorf("sb: could not start playwright: %w (auto-install also failed: %v)", err, installErr)
+		}
+		// Set channel if system Chrome was found and no explicit browser was set
+		if channel != "" && cfg.Browser == "chromium" {
+			cfg.Channel = channel
+		}
+		// Retry
+		pw, err = playwright.Run()
+		if err != nil {
+			return nil, fmt.Errorf("sb: could not start playwright after install: %w", err)
+		}
 	}
 
 	if cfg.Stealth {
 		return newStealthSB(pw, cfg)
+	}
+
+	if cfg.RemoteCDPURL != "" {
+		return newRemoteCDPSB(pw, cfg)
+	}
+	if cfg.RemoteWSURL != "" {
+		return newRemoteWSSB(pw, cfg)
 	}
 
 	var browserType playwright.BrowserType
@@ -50,6 +70,9 @@ func newSB(opts ...Option) (*SB, error) {
 	if cfg.Proxy != "" {
 		launchOpts.Proxy = &playwright.Proxy{Server: cfg.Proxy}
 	}
+	if cfg.Channel != "" {
+		launchOpts.Channel = playwright.String(cfg.Channel)
+	}
 
 	browser, err := browserType.Launch(launchOpts)
 	if err != nil {
@@ -57,32 +80,7 @@ func newSB(opts ...Option) (*SB, error) {
 		return nil, fmt.Errorf("sb: could not launch browser: %w", err)
 	}
 
-	contextOpts := playwright.BrowserNewContextOptions{}
-	if cfg.ViewportWidth > 0 && cfg.ViewportHeight > 0 {
-		contextOpts.Viewport = &playwright.Size{
-			Width:  cfg.ViewportWidth,
-			Height: cfg.ViewportHeight,
-		}
-	}
-	if cfg.UserAgent != "" {
-		contextOpts.UserAgent = playwright.String(cfg.UserAgent)
-	}
-	if cfg.Locale != "" {
-		contextOpts.Locale = playwright.String(cfg.Locale)
-	}
-	if cfg.IgnoreHTTPSErrors {
-		contextOpts.IgnoreHttpsErrors = playwright.Bool(true)
-	}
-	if cfg.ColorScheme != "" {
-		switch cfg.ColorScheme {
-		case "dark":
-			contextOpts.ColorScheme = playwright.ColorSchemeDark
-		case "light":
-			contextOpts.ColorScheme = playwright.ColorSchemeLight
-		case "no-preference":
-			contextOpts.ColorScheme = playwright.ColorSchemeNoPreference
-		}
-	}
+	contextOpts := buildContextOpts(pw, cfg)
 
 	context, err := browser.NewContext(contextOpts)
 	if err != nil {
@@ -144,8 +142,18 @@ func Run(fn func(p *Page) error, opts ...Option) error {
 // RunTest creates an SB instance integrated with testing.T.
 func RunTest(t *testing.T, fn func(p *Page), opts ...Option) {
 	t.Helper()
+
+	// Check if ScreenshotOnFailure is requested
+	cfg := newDefaultConfig()
+	for _, o := range opts {
+		o(cfg)
+	}
+
 	err := Run(func(p *Page) error {
 		fn(p)
+		if cfg.ScreenshotOnFailure && t.Failed() {
+			_ = p.Screenshot(fmt.Sprintf("failure_%s.png", t.Name()))
+		}
 		return nil
 	}, opts...)
 	if err != nil {
@@ -172,4 +180,58 @@ func NewPage(opts ...Option) (*Page, func(), error) {
 	}
 
 	return page, cleanup, nil
+}
+
+// buildContextOpts creates BrowserNewContextOptions from the config.
+func buildContextOpts(pw *playwright.Playwright, cfg *Config) playwright.BrowserNewContextOptions {
+	contextOpts := playwright.BrowserNewContextOptions{}
+	if cfg.ViewportWidth > 0 && cfg.ViewportHeight > 0 {
+		contextOpts.Viewport = &playwright.Size{
+			Width:  cfg.ViewportWidth,
+			Height: cfg.ViewportHeight,
+		}
+	}
+	if cfg.UserAgent != "" {
+		contextOpts.UserAgent = playwright.String(cfg.UserAgent)
+	}
+	if cfg.Locale != "" {
+		contextOpts.Locale = playwright.String(cfg.Locale)
+	}
+	if cfg.IgnoreHTTPSErrors {
+		contextOpts.IgnoreHttpsErrors = playwright.Bool(true)
+	}
+	if cfg.ColorScheme != "" {
+		switch cfg.ColorScheme {
+		case "dark":
+			contextOpts.ColorScheme = playwright.ColorSchemeDark
+		case "light":
+			contextOpts.ColorScheme = playwright.ColorSchemeLight
+		case "no-preference":
+			contextOpts.ColorScheme = playwright.ColorSchemeNoPreference
+		}
+	}
+	if cfg.Mobile {
+		contextOpts.IsMobile = playwright.Bool(true)
+		contextOpts.HasTouch = playwright.Bool(true)
+	}
+	if cfg.DeviceName != "" {
+		device := pw.Devices[cfg.DeviceName]
+		if device != nil {
+			contextOpts.UserAgent = playwright.String(device.UserAgent)
+			contextOpts.Viewport = device.Viewport
+			contextOpts.DeviceScaleFactor = playwright.Float(device.DeviceScaleFactor)
+			contextOpts.IsMobile = playwright.Bool(device.IsMobile)
+			contextOpts.HasTouch = playwright.Bool(device.HasTouch)
+		}
+	}
+	if cfg.RecordVideo != "" {
+		contextOpts.RecordVideo = &playwright.RecordVideo{Dir: cfg.RecordVideo}
+	}
+	if cfg.RecordHAR != "" {
+		contextOpts.RecordHarPath = playwright.String(cfg.RecordHAR)
+	}
+	if cfg.DisableCSP {
+		contextOpts.BypassCSP = playwright.Bool(true)
+	}
+	return contextOpts
 }

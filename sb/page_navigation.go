@@ -1,6 +1,10 @@
 package sb
 
-import "github.com/playwright-community/playwright-go"
+import (
+	"path/filepath"
+
+	"github.com/playwright-community/playwright-go"
+)
 
 func (p *Page) Open(url string) error {
 	_, err := p.pw.Goto(url, playwright.PageGotoOptions{
@@ -38,4 +42,14 @@ func (p *Page) GetPageSource() (string, error) {
 
 func (p *Page) SetContent(html string) error {
 	return p.pw.SetContent(html)
+}
+
+// LoadHTMLFile opens a local HTML file in the browser.
+func (p *Page) LoadHTMLFile(path string) error {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+	_, err = p.pw.Goto("file://" + absPath)
+	return err
 }

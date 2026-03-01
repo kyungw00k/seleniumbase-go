@@ -44,3 +44,15 @@ func (p *Page) FindElements(sel string) ([]playwright.Locator, error) {
 func (p *Page) Count(sel string) (int, error) {
 	return p.locator(sel).Count()
 }
+
+// GetUserAgent returns the browser's user agent string.
+func (p *Page) GetUserAgent() (string, error) {
+	result, err := p.pw.Evaluate(`() => navigator.userAgent`)
+	if err != nil {
+		return "", err
+	}
+	if s, ok := result.(string); ok {
+		return s, nil
+	}
+	return "", nil
+}

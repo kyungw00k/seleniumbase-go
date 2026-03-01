@@ -58,3 +58,8 @@ func (p *Page) WaitForURL(url string) error {
 func (p *Page) Sleep(d time.Duration) {
 	time.Sleep(d)
 }
+
+// WaitForAttribute waits until the element's attribute equals the expected value.
+func (p *Page) WaitForAttribute(sel, attr, val string) error {
+	return p.expect.Locator(p.locator(sel)).ToHaveAttribute(attr, val)
+}

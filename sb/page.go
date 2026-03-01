@@ -1,9 +1,17 @@
 package sb
 
 import (
-	"github.com/playwright-community/playwright-go"
+	"sync"
+
 	"github.com/kyungw00k/seleniumbase-go/selector"
+	"github.com/playwright-community/playwright-go"
 )
+
+// ConsoleMessage represents a captured browser console message.
+type ConsoleMessage struct {
+	Type string // "log", "error", "warning", "info"
+	Text string
+}
 
 // Page wraps a playwright.Page with SeleniumBase-style convenience methods.
 type Page struct {
@@ -13,6 +21,8 @@ type Page struct {
 	expect           playwright.PlaywrightAssertions
 	deferredFailures []error
 	recording        bool
+	consoleMu        sync.Mutex
+	consoleMessages  []ConsoleMessage
 }
 
 func newPage(pw playwright.Page, ctx playwright.BrowserContext, cfg *Config) *Page {

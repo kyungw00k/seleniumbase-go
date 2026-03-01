@@ -268,33 +268,7 @@ func newStealthSB(pw *playwright.Playwright, cfg *Config) (*SB, error) {
 	if contexts := browser.Contexts(); len(contexts) > 0 {
 		ctx = contexts[0]
 	} else {
-		contextOpts := playwright.BrowserNewContextOptions{}
-		if cfg.ViewportWidth > 0 && cfg.ViewportHeight > 0 {
-			contextOpts.Viewport = &playwright.Size{
-				Width:  cfg.ViewportWidth,
-				Height: cfg.ViewportHeight,
-			}
-		}
-		if cfg.UserAgent != "" {
-			contextOpts.UserAgent = playwright.String(cfg.UserAgent)
-		}
-		if cfg.Locale != "" {
-			contextOpts.Locale = playwright.String(cfg.Locale)
-		}
-		if cfg.IgnoreHTTPSErrors {
-			contextOpts.IgnoreHttpsErrors = playwright.Bool(true)
-		}
-		if cfg.ColorScheme != "" {
-			switch cfg.ColorScheme {
-			case "dark":
-				contextOpts.ColorScheme = playwright.ColorSchemeDark
-			case "light":
-				contextOpts.ColorScheme = playwright.ColorSchemeLight
-			case "no-preference":
-				contextOpts.ColorScheme = playwright.ColorSchemeNoPreference
-			}
-		}
-		ctx, err = browser.NewContext(contextOpts)
+		ctx, err = browser.NewContext(buildContextOpts(pw, cfg))
 		if err != nil {
 			proc.stop()
 			pw.Stop()

@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         go-version: ['1.22', '1.23']
 
@@ -21,14 +22,27 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
 
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
       - name: Build
         run: go build ./...
 
       - name: Vet
         run: go vet ./...
 
-      - name: Unit Tests
-        run: go test ./selector/... -v
+      - name: Unit Tests (selector)
+        run: gotestsum --junitfile junit/unit-selector.xml -- ./selector/... -v
+
+      - name: Unit Tests (sb)
+        run: gotestsum --junitfile junit/unit-sb.xml -- ./sb/... -v
+
+      - name: Upload Unit Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results-go${{ matrix.go-version }}
+          path: junit/*.xml
 
   integration:
     runs-on: ubuntu-latest
@@ -42,8 +56,67 @@ jobs:
         with:
           go-version: '1.23'
 
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
       - name: Install Playwright browsers
         run: go run github.com/playwright-community/playwright-go/cmd/playwright@v0.5700.1 install --with-deps chromium
 
-      - name: Integration Tests
-        run: go test ./examples/... -tags integration -v -timeout 120s
+      - name: Run TestBasicDemo
+        run: gotestsum --junitfile junit/basic-demo.xml -- ./examples/... -tags integration -run TestBasicDemo -v -timeout 60s
+
+      - name: Run TestDemoSite
+        run: gotestsum --junitfile junit/demo-site.xml -- ./examples/... -tags integration -run TestDemoSite -v -timeout 60s
+
+      - name: Run TestIframeBasics
+        run: gotestsum --junitfile junit/iframe.xml -- ./examples/... -tags integration -run TestIframeBasics -v -timeout 60s
+
+      - name: Run TestMFALogin
+        run: gotestsum --junitfile junit/mfa-login.xml -- ./examples/... -tags integration -run TestMFALogin -v -timeout 60s
+
+      - name: Run TestDeferredAsserts
+        run: gotestsum --junitfile junit/deferred-asserts.xml -- ./examples/... -tags integration -run TestDeferredAsserts -v -timeout 60s
+
+      - name: Run TestTabSwitching
+        run: gotestsum --junitfile junit/tab-switching.xml -- ./examples/... -tags integration -run TestTabSwitching -v -timeout 60s
+
+      - name: Run TestDragAndDrop
+        run: gotestsum --junitfile junit/drag-and-drop.xml -- ./examples/... -tags integration -run TestDragAndDrop -v -timeout 60s
+
+      - name: Run TestVisualBaseline
+        run: gotestsum --junitfile junit/visual-baseline.xml -- ./examples/... -tags integration -run TestVisualBaseline -v -timeout 60s
+
+      - name: Run TestVisualDOMChange
+        run: gotestsum --junitfile junit/visual-dom-change.xml -- ./examples/... -tags integration -run TestVisualDOMChange -v -timeout 60s
+
+      - name: Run TestVisualAssertMatch
+        run: gotestsum --junitfile junit/visual-assert-match.xml -- ./examples/... -tags integration -run TestVisualAssertMatch -v -timeout 60s
+
+      - name: Upload Integration Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: junit/*.xml
+
+  report:
+    runs-on: ubuntu-latest
+    needs: [test, integration]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download All Test Results
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results
+          merge-multiple: true
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Test Results
+          path: test-results/**/*.xml
+          reporter: java-junit

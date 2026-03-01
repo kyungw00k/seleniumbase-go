@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/kyungw00k/seleniumbase-go/compare/v1.1.0...v1.2.0) (2026-03-01)
+
+
+### Features
+
+* add Tier 1-3 features, remote browser, MasterQA, auto-install, and restructure docs ([4bf1f39](https://github.com/kyungw00k/seleniumbase-go/commit/4bf1f39f1bc6b195dfe8b92dd9865c03eedb3209))
+
 ## [1.1.0](https://github.com/kyungw00k/seleniumbase-go/compare/v1.0.0...v1.1.0) (2026-03-01)
 
 

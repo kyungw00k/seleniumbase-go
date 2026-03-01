@@ -1,0 +1,241 @@
+package sb
+
+import (
+	"encoding/xml"
+	"fmt"
+	"html/template"
+	"os"
+	"time"
+)
+
+// JUnit XML structures (standard JUnit schema)
+
+// JUnitTestSuites is the root element of a JUnit XML report.
+type JUnitTestSuites struct {
+	XMLName xml.Name         `xml:"testsuites"`
+	Suites  []JUnitTestSuite `xml:"testsuite"`
+}
+
+// JUnitTestSuite represents a single test suite.
+type JUnitTestSuite struct {
+	XMLName  xml.Name        `xml:"testsuite"`
+	Name     string          `xml:"name,attr"`
+	Tests    int             `xml:"tests,attr"`
+	Failures int             `xml:"failures,attr"`
+	Time     float64         `xml:"time,attr"`
+	Cases    []JUnitTestCase `xml:"testcase"`
+}
+
+// JUnitTestCase represents a single test case.
+type JUnitTestCase struct {
+	XMLName xml.Name      `xml:"testcase"`
+	Name    string        `xml:"name,attr"`
+	Time    float64       `xml:"time,attr"`
+	Failure *JUnitFailure `xml:"failure,omitempty"`
+}
+
+// JUnitFailure represents a test case failure.
+type JUnitFailure struct {
+	Message string `xml:"message,attr"`
+	Type    string `xml:"type,attr"`
+	Body    string `xml:",chardata"`
+}
+
+// GenerateJUnitReport creates a JUnit XML report file from parallel results.
+func GenerateJUnitReport(path string, suiteName string, results []ParallelResult) error {
+	var totalTime float64
+	failures := 0
+	cases := make([]JUnitTestCase, len(results))
+
+	for i, r := range results {
+		secs := r.Duration.Seconds()
+		totalTime += secs
+		tc := JUnitTestCase{
+			Name: r.Name,
+			Time: secs,
+		}
+		if !r.Passed {
+			failures++
+			msg := "test failed"
+			typ := "error"
+			if r.Error != nil {
+				msg = r.Error.Error()
+				typ = "error"
+			}
+			tc.Failure = &JUnitFailure{
+				Message: msg,
+				Type:    typ,
+				Body:    msg,
+			}
+		}
+		cases[i] = tc
+	}
+
+	suites := JUnitTestSuites{
+		Suites: []JUnitTestSuite{
+			{
+				Name:     suiteName,
+				Tests:    len(results),
+				Failures: failures,
+				Time:     totalTime,
+				Cases:    cases,
+			},
+		},
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("sb: could not create report file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(xml.Header); err != nil {
+		return err
+	}
+
+	enc := xml.NewEncoder(f)
+	enc.Indent("", "  ")
+	if err := enc.Encode(suites); err != nil {
+		return fmt.Errorf("sb: could not write JUnit XML: %w", err)
+	}
+	return nil
+}
+
+// HTML Report
+
+const htmlReportTemplate = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SeleniumBase-go Test Report</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; background: #f5f5f5; }
+.header { background: #2d3748; color: white; padding: 20px 30px; border-radius: 8px 8px 0 0; }
+.header h1 { margin: 0; font-size: 24px; }
+.header .meta { color: #a0aec0; font-size: 14px; margin-top: 8px; }
+.summary { display: flex; gap: 20px; padding: 20px 30px; background: white; border-bottom: 1px solid #e2e8f0; }
+.stat { text-align: center; }
+.stat .value { font-size: 32px; font-weight: bold; }
+.stat .label { font-size: 12px; color: #718096; text-transform: uppercase; }
+.passed .value { color: #38a169; }
+.failed .value { color: #e53e3e; }
+.total .value { color: #2d3748; }
+.duration .value { color: #3182ce; }
+table { width: 100%; border-collapse: collapse; background: white; }
+th { text-align: left; padding: 12px 16px; background: #edf2f7; color: #4a5568; font-size: 13px; text-transform: uppercase; }
+td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; }
+.status-pass { color: #38a169; font-weight: bold; }
+.status-fail { color: #e53e3e; font-weight: bold; }
+.error-msg { color: #e53e3e; font-size: 13px; margin-top: 4px; }
+.footer { padding: 16px 30px; background: white; border-radius: 0 0 8px 8px; color: #a0aec0; font-size: 13px; text-align: center; }
+.container { max-width: 960px; margin: 0 auto; box-shadow: 0 1px 3px rgba(0,0,0,0.12); border-radius: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>{{.Title}}</h1>
+<div class="meta">Generated: {{.Timestamp}}</div>
+</div>
+<div class="summary">
+<div class="stat passed"><div class="value">{{.Passed}}</div><div class="label">Passed</div></div>
+<div class="stat failed"><div class="value">{{.Failed}}</div><div class="label">Failed</div></div>
+<div class="stat total"><div class="value">{{.Total}}</div><div class="label">Total</div></div>
+<div class="stat duration"><div class="value">{{.Duration}}</div><div class="label">Duration</div></div>
+</div>
+<table>
+<thead><tr><th>Test</th><th>Status</th><th>Duration</th><th>Details</th></tr></thead>
+<tbody>
+{{range .Results}}
+<tr>
+<td>{{.Name}}</td>
+<td>{{if .Passed}}<span class="status-pass">PASS</span>{{else}}<span class="status-fail">FAIL</span>{{end}}</td>
+<td>{{.DurationStr}}</td>
+<td>{{if .ErrorMsg}}<div class="error-msg">{{.ErrorMsg}}</div>{{end}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+<div class="footer">Generated by seleniumbase-go</div>
+</div>
+</body>
+</html>`
+
+// htmlReportData is the data passed to the HTML template.
+type htmlReportData struct {
+	Title     string
+	Timestamp string
+	Passed    int
+	Failed    int
+	Total     int
+	Duration  string
+	Results   []htmlResultRow
+}
+
+// htmlResultRow represents a single row in the HTML report table.
+type htmlResultRow struct {
+	Name        string
+	Passed      bool
+	DurationStr string
+	ErrorMsg    string
+}
+
+// GenerateHTMLReport creates an HTML report file from parallel results.
+func GenerateHTMLReport(path string, title string, results []ParallelResult) error {
+	passed := 0
+	failed := 0
+	var totalDuration time.Duration
+	rows := make([]htmlResultRow, len(results))
+
+	for i, r := range results {
+		if r.Passed {
+			passed++
+		} else {
+			failed++
+		}
+		totalDuration += r.Duration
+		row := htmlResultRow{
+			Name:        r.Name,
+			Passed:      r.Passed,
+			DurationStr: formatDuration(r.Duration),
+		}
+		if r.Error != nil {
+			row.ErrorMsg = r.Error.Error()
+		}
+		rows[i] = row
+	}
+
+	data := htmlReportData{
+		Title:     title,
+		Timestamp: time.Now().Format("2006-01-02 15:04:05"),
+		Passed:    passed,
+		Failed:    failed,
+		Total:     len(results),
+		Duration:  formatDuration(totalDuration),
+		Results:   rows,
+	}
+
+	tmpl, err := template.New("report").Parse(htmlReportTemplate)
+	if err != nil {
+		return fmt.Errorf("sb: could not parse report template: %w", err)
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("sb: could not create report file: %w", err)
+	}
+	defer f.Close()
+
+	if err := tmpl.Execute(f, data); err != nil {
+		return fmt.Errorf("sb: could not generate HTML report: %w", err)
+	}
+	return nil
+}
+
+// formatDuration returns a human-readable duration string.
+func formatDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	return fmt.Sprintf("%.2fs", d.Seconds())
+}

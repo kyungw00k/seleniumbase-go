@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.22+-blue)](https://go.dev)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-SeleniumBase-style browser automation for Go, built on [playwright-go](https://github.com/playwright-community/playwright-go).
+A Go port of [SeleniumBase](https://github.com/seleniumbase/SeleniumBase) — simple, powerful browser automation built on [playwright-go](https://github.com/playwright-community/playwright-go).
 
 ---
 
@@ -27,6 +27,9 @@ SeleniumBase-style browser automation for Go, built on [playwright-go](https://g
 - MFA / TOTP support — generate and enter time-based one-time passwords
 - CDP stealth mode — launch Chrome externally with anti-detection flags, connect via CDP
 - Recorder — capture browser interactions and generate Go test code
+- Visual testing — pixel-level screenshot comparison with baseline management
+- Parallel test runner — concurrent test execution with isolated browser instances
+- Report generation — JUnit XML and styled HTML test reports
 
 ---
 
@@ -420,6 +423,72 @@ When stealth mode is enabled:
 - A temporary user data directory is created and cleaned up on close
 - All standard `sb.Page` methods work normally
 
+### Visual Testing
+
+Compare screenshots against stored baselines for pixel-level regression testing.
+
+```go
+sb.Run(func(p *sb.Page) error {
+    p.Open("https://example.com")
+
+    // First run saves a baseline; subsequent runs compare against it
+    result, err := p.CheckWindow("homepage", 0.5) // 0.5% threshold
+    if err != nil {
+        return err
+    }
+    fmt.Printf("Match: %v, Diff: %.2f%%\n", result.Match, result.DiffPercent)
+
+    // Or use the assertion form
+    p.AssertVisualMatch("homepage", 0.5)
+
+    // Force-update the baseline
+    p.UpdateBaseline("homepage")
+    return nil
+}, sb.WithHeadless(true))
+```
+
+Baselines are stored in `visual_baseline/` with `_baseline.png`, `_latest.png`, and `_diff.png` suffixes.
+
+### Parallel Test Runner
+
+Run multiple test functions concurrently, each with its own browser instance.
+
+```go
+// Standalone usage
+tests := []sb.TestFunc{
+    {Name: "Login", Fn: func(p *sb.Page) error {
+        p.Open("https://example.com/login")
+        return nil
+    }},
+    {Name: "Search", Fn: func(p *sb.Page) error {
+        p.Open("https://example.com/search")
+        return nil
+    }},
+}
+
+results := sb.RunParallel(tests, sb.WithHeadless(true))
+fmt.Println(sb.ParallelSummary(results))
+
+// testing.T integration
+func TestAll(t *testing.T) {
+    sb.RunParallelTest(t, tests, sb.WithHeadless(true))
+}
+```
+
+### Report Generation
+
+Generate JUnit XML or styled HTML reports from parallel test results.
+
+```go
+results := sb.RunParallel(tests, sb.WithHeadless(true))
+
+// JUnit XML report (CI-compatible)
+sb.GenerateJUnitReport("report.xml", "MySuite", results)
+
+// HTML report with visual summary
+sb.GenerateHTMLReport("report.html", "Test Results", results)
+```
+
 ---
 
 ## Escape Hatches
@@ -462,13 +531,19 @@ go test -tags integration ./examples/...
 
 **Phase 2 (complete)** — Extension features: scroll methods, network interception, highlight/demo mode, deferred assertions, extended selectors (`text=`, `role=`, `label=`), MFA/TOTP support
 
-**Phase 3 (in progress)**
+**Phase 3 (complete)**
 
-- ~~CDP stealth mode for bot detection bypass~~ (complete)
-- ~~Recorder — capture and replay browser sessions~~ (complete)
-- Visual testing — screenshot comparison and diffing
-- Parallel test runner utilities
-- Report generation (HTML, JUnit)
+- ~~CDP stealth mode for bot detection bypass~~
+- ~~Recorder — capture and replay browser sessions~~
+- ~~Visual testing — screenshot comparison and diffing~~
+- ~~Parallel test runner utilities~~
+- ~~Report generation (HTML, JUnit)~~
+
+---
+
+## Inspired By
+
+This project is inspired by [SeleniumBase](https://github.com/seleniumbase/SeleniumBase), the comprehensive Python browser automation framework. seleniumbase-go brings the same simple, powerful API design to the Go ecosystem using [playwright-go](https://github.com/playwright-community/playwright-go) as the underlying browser automation engine.
 
 ---
 

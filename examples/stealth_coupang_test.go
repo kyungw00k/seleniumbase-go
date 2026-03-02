@@ -45,7 +45,7 @@ func TestCoupangStealthAccess(t *testing.T) {
 		currentURL := p.GetCurrentURL()
 		t.Logf("Current URL: %s", currentURL)
 
-	}, sb.WithStealth(true), sb.WithHeadless(false))
+	}, sb.WithStealth(true), sb.WithHeadless(true))
 }
 
 func TestCoupangNormalBlocked(t *testing.T) {
@@ -68,5 +68,5 @@ func TestCoupangNormalBlocked(t *testing.T) {
 
 		currentURL := p.GetCurrentURL()
 		t.Logf("Normal mode URL: %s", currentURL)
-	}, sb.WithHeadless(false))
+	}, sb.WithHeadless(true))
 }

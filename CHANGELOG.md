@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/kyungw00k/seleniumbase-go/compare/v1.2.1...v1.3.0) (2026-03-02)
+
+
+### Features
+
+* **stealth:** fix headless bot detection bypass for Akamai WAF ([a9a5058](https://github.com/kyungw00k/seleniumbase-go/commit/a9a5058382e024117d8d85008df3cec5efb5e2ba))
+
+
+### Bug Fixes
+
+* **test:** run Coupang stealth tests in headless mode ([ba80c3c](https://github.com/kyungw00k/seleniumbase-go/commit/ba80c3c09d0ebc968ba1b305e09a157845997b6f))
+
 ## [1.2.1](https://github.com/kyungw00k/seleniumbase-go/compare/v1.2.0...v1.2.1) (2026-03-01)
 
 

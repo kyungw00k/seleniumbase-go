@@ -14,7 +14,57 @@ import (
 	"github.com/playwright-community/playwright-go"
 )
 
+// getChromeVersion runs "chrome --version" and returns the version string (e.g. "145.0.7449.84").
+// Returns an empty string on failure.
+func getChromeVersion(chromePath string) string {
+	out, err := exec.Command(chromePath, "--version").Output()
+	if err != nil {
+		return ""
+	}
+	// Output: "Google Chrome 145.0.7449.84\n" or "Chromium 145.0.7449.84\n"
+	fields := strings.Fields(strings.TrimSpace(string(out)))
+	if len(fields) >= 1 {
+		return fields[len(fields)-1]
+	}
+	return ""
+}
+
+// buildHeadlessUA returns a realistic Chrome user agent for the current OS.
+// Chrome 112+ uses a "frozen" UA format (major.0.0.0) to prevent fingerprinting.
+// This replaces the "HeadlessChrome/major.0.0.0" marker that Chrome headless=new
+// still reports, making navigator.userAgent indistinguishable from headed Chrome.
+func buildHeadlessUA(chromePath string) string {
+	full := getChromeVersion(chromePath)
+	// Parse major version from "145.0.7632.117" → "145"
+	major := full
+	if idx := strings.Index(full, "."); idx >= 0 {
+		major = full[:idx]
+	}
+	if major == "" {
+		major = "131"
+	}
+	// Chrome frozen UA format: major.0.0.0
+	frozenVersion := major + ".0.0.0"
+
+	var osPart string
+	switch runtime.GOOS {
+	case "darwin":
+		osPart = "Macintosh; Intel Mac OS X 10_15_7"
+	case "linux":
+		osPart = "X11; Linux x86_64"
+	case "windows":
+		osPart = "Windows NT 10.0; Win64; x64"
+	default:
+		osPart = "Macintosh; Intel Mac OS X 10_15_7"
+	}
+	return fmt.Sprintf(
+		"Mozilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/537.36",
+		osPart, frozenVersion,
+	)
+}
+
 var defaultStealthArgs = []string{
+	"--disable-blink-features=AutomationControlled",
 	"--no-first-run",
 	"--no-service-autorun",
 	"--disable-auto-reload",
@@ -210,6 +260,31 @@ func (sp *stealthProcess) stop() {
 	}
 }
 
+// applyStealthCDP sends CDP commands that apply per-page stealth settings.
+// User-Agent is handled via the --user-agent= Chrome launch flag (not CDP), because
+// Network.setUserAgentOverride without userAgentMetadata suppresses sec-ch-ua headers,
+// which WAFs like Akamai detect as an automation signal. The Chrome flag changes
+// navigator.userAgent while leaving sec-ch-ua intact.
+func applyStealthCDP(ctx playwright.BrowserContext, page playwright.Page, cfg *Config) error {
+	session, err := ctx.NewCDPSession(page)
+	if err != nil {
+		return fmt.Errorf("sb: could not create CDP session: %w", err)
+	}
+	// Do not detach — overrides must persist for the lifetime of the page.
+
+	// Enable network domain — mirrors Python SeleniumBase cdp_driver behavior.
+	if _, err = session.Send("Network.enable", nil); err != nil {
+		return fmt.Errorf("sb: Network.enable failed: %w", err)
+	}
+
+	// Bypass Content-Security-Policy to allow scripts to run on strict pages.
+	if _, err = session.Send("Page.setBypassCSP", map[string]any{"enabled": true}); err != nil {
+		return fmt.Errorf("sb: Page.setBypassCSP failed: %w", err)
+	}
+
+	return nil
+}
+
 func newStealthSB(pw *playwright.Playwright, cfg *Config) (*SB, error) {
 	chromePath := cfg.ChromePath
 	if chromePath == "" {
@@ -218,6 +293,14 @@ func newStealthSB(pw *playwright.Playwright, cfg *Config) (*SB, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Chrome headless=new still reports "HeadlessChrome/major.0.0.0" in its User-Agent,
+	// which WAFs like Akamai detect via navigator.userAgent. Override with the real
+	// Chrome UA using the --user-agent= flag. This changes navigator.userAgent without
+	// suppressing sec-ch-ua (unlike Network.setUserAgentOverride without metadata).
+	if cfg.Headless && cfg.UserAgent == "" {
+		cfg.UserAgent = buildHeadlessUA(chromePath)
 	}
 
 	port, err := freePort()

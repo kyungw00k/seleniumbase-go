@@ -142,3 +142,44 @@ func TestDefaultStealthArgs_NoEnableAutomation(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildHeadlessUA_NoHeadless(t *testing.T) {
+	// Empty chromePath falls back to default version — UA must not contain "Headless".
+	ua := buildHeadlessUA("")
+	if strings.Contains(ua, "Headless") {
+		t.Errorf("UA contains Headless token: %q", ua)
+	}
+	if !strings.Contains(ua, "Chrome/") {
+		t.Errorf("UA missing Chrome/ token: %q", ua)
+	}
+}
+
+func TestBuildHeadlessUA_WithChrome(t *testing.T) {
+	path, err := findChrome()
+	if err != nil {
+		t.Skip("Chrome not installed")
+	}
+	ua := buildHeadlessUA(path)
+	if strings.Contains(ua, "Headless") {
+		t.Errorf("UA contains Headless token: %q", ua)
+	}
+	if !strings.Contains(ua, "Chrome/") {
+		t.Errorf("UA missing Chrome/ token: %q", ua)
+	}
+}
+
+func TestGetChromeVersion(t *testing.T) {
+	path, err := findChrome()
+	if err != nil {
+		t.Skip("Chrome not installed")
+	}
+	version := getChromeVersion(path)
+	if version == "" {
+		t.Error("getChromeVersion returned empty string")
+	}
+	// Version should look like "145.0.7449.84"
+	if !strings.Contains(version, ".") {
+		t.Errorf("version %q does not look like a version string", version)
+	}
+}
+

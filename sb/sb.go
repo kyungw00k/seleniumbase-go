@@ -105,6 +105,12 @@ func (s *SB) newPage() (*Page, error) {
 	if s.config.Timeout > 0 {
 		page.SetDefaultTimeout(float64(s.config.Timeout.Milliseconds()))
 	}
+	if s.config.Stealth {
+		if err := applyStealthCDP(s.context, page, s.config); err != nil {
+			page.Close()
+			return nil, err
+		}
+	}
 	return newPage(page, s.context, s.config), nil
 }
 
